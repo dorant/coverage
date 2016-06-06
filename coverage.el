@@ -114,55 +114,56 @@ its existence)."
   :type 'function
   :group 'cov)
 
-(defface cov-background '((t :foreground "gray35"))
+(defface cov-background '((t))
   "Face used to overlay the buffer if `cov-background' is non-nil."
   :group 'cov)
 
-(defface cov-nocoverage-face '((t :foreground  "#FF0000"))
+(defface cov-nocoverage-face '((t :background  "#FF3300"))
   "Face used for code that is not covered by the profile."
   :group 'cov)
 
-(defface cov-0-face '((t :foreground  "#808080"))
+(defface cov-0-face '((t :background  "#99FF99"))
   "Face used for code that's barely covered by the profile."
   :group 'cov)
 
-(defface cov-1-face '((t :foreground  "#748C83"))
+(defface cov-1-face '((t :background  "#88FF88"))
   "Faces used for code covered by the profile."
   :group 'cov)
 
-(defface cov-2-face '((t :foreground  "#689886"))
+(defface cov-2-face '((t :background  "#88FF88"))
   "Faces used for code covered by the profile."
   :group 'cov)
 
-(defface cov-3-face '((t :foreground  "#5CA489"))
+(defface cov-3-face '((t :background  "#77FF77"))
   "Faces used for code covered by the profile."
   :group 'cov)
 
-(defface cov-4-face '((t :foreground  "#50B08C"))
+(defface cov-4-face '((t :background  "#77FF77"))
   "Faces used for code covered by the profile."
   :group 'cov)
 
-(defface cov-5-face '((t :foreground  "#44BC8F"))
+(defface cov-5-face '((t :background  "#66FF66"))
   "Faces used for code covered by the profile."
   :group 'cov)
 
-(defface cov-6-face '((t :foreground  "#38C892"))
+(defface cov-6-face '((t :background  "#66FF66"))
   "Faces used for code covered by the profile."
   :group 'cov)
 
-(defface cov-7-face '((t :foreground  "#2CD495"))
+(defface cov-7-face '((t :background  "#55FF55"))
   "Faces used for code covered by the profile."
   :group 'cov)
 
-(defface cov-8-face '((t :foreground  "#20E098"))
+(defface cov-8-face '((t :background  "#55FF55"))
   "Faces used for code covered by the profile."
   :group 'cov)
 
-(defface cov-9-face '((t :foreground  "#14EC9B"))
+(defface cov-9-face '((t :background  "#44FF44"))
   "Faces used for code covered by the profile."
   :group 'cov)
 
 
+;;------------------------------------------------------------------------------
 (cl-defstruct (cov-tool
                (:constructor nil)
                (:constructor cov-make-tool)
@@ -191,6 +192,7 @@ its existence)."
   ;; which the profile should be shown.
   prefix)
 
+;;------------------------------------------------------------------------------
 (cl-defstruct (cov-block
                (:constructor nil)
                (:constructor cov-make-block))
@@ -198,6 +200,7 @@ its existence)."
   ;; be non-nil.
   start-line start-col end-line end-col count)
 
+;;------------------------------------------------------------------------------
 (cl-defun cov--block-region (block)
   "Calculate a buffer region covered by the BLOCK.
 
@@ -221,6 +224,7 @@ The returned region is a dotted pair (start . end)."
                  (1+ (cov-block-start-line block)))
              (or (cov-block-end-col block) 0)))))
 
+;;------------------------------------------------------------------------------
 (cl-defstruct (cov-profile
                (:constructor nil)
                (:constructor cov-make-profile
@@ -230,6 +234,7 @@ The returned region is a dotted pair (start . end)."
   blocks ; file path (absolute if path-prefix is nil) -> block
   path-prefix) ; set if file names are not absolute
 
+;;------------------------------------------------------------------------------
 ;;;###autoload
 (cl-defun cov-add-block-to-profile (profile fname block)
   "Add BLOCK as part of PROFILE for the file FNAME.
@@ -239,6 +244,7 @@ FNAME should be an absolute path."
            (cons block (cov--profile-blocks-for-file profile fname))
            (cov-profile-blocks profile)))
 
+;;------------------------------------------------------------------------------
 (cl-defun cov--profile-blocks-for-file (profile fname)
   "Return all blocks from PROFILE for the file FNAME."
   (gethash
@@ -247,6 +253,7 @@ FNAME should be an absolute path."
      fname)
    (cov-profile-blocks profile)))
 
+;;------------------------------------------------------------------------------
 (cl-defun cov--profile-files (profile &optional abs)
   "Return a list of absolute file names covered by the PROFILE.
 
@@ -255,8 +262,32 @@ If ABS is 'absolute then profile PATH-PREFIX is prepended to all results."
            collect (concat (or (and (eq abs 'absolute) (cov-profile-path-prefix profile)) "")
                            fname)))
 
+;;------------------------------------------------------------------------------
+;; define-error is missing for earlier Emacs versions
+(when (version< emacs-version "24.4")
+  (defun define-error (name message &optional parent)
+    "Define NAME as a new error signal.
+MESSAGE is a string that will be output to the echo area if such an error
+is signaled without being caught by a `condition-case'.
+PARENT is either a signal or a list of signals from which it inherits.
+Defaults to `error'."
+    (unless parent (setq parent 'error))
+    (let ((conditions
+           (if (consp parent)
+               (apply #'nconc
+                      (mapcar (lambda (parent)
+                                (cons parent
+                                      (or (get parent 'error-conditions)
+                                          (error "Unknown signal `%s'" parent))))
+                              parent))
+             (cons parent (get parent 'error-conditions)))))
+      (put name 'error-conditions
+           (delete-dups (copy-sequence (cons name conditions))))
+      (when message (put name 'error-message message)))))
+
 (define-error 'cov--no-profile "no coverage profile")
 
+;;------------------------------------------------------------------------------
 (defvar cov--profile-sources (make-hash-table :test 'equal)
   "Map from file name to source of a profile.
 
@@ -267,6 +298,7 @@ of the form (tool-id . profile-fname) where tool-id identifies
 tool that generated the profile and profile-fname is an absolute
 path to file with the profile data.")
 
+;;------------------------------------------------------------------------------
 (cl-defun cov--update-profile-source (profile)
   "Adds information about source of PROFILE to `cov--profile-sources'."
   (cl-loop for fname in (cov--profile-files profile 'absolute)
@@ -274,6 +306,7 @@ path to file with the profile data.")
                        (cov-profile-source profile)
                        cov--profile-sources)))
 
+;;------------------------------------------------------------------------------
 (defvar cov--show-profile nil
   "If not nil then the coverage profile is shown in the buffer.
 
@@ -282,6 +315,7 @@ then it is shown as soon as the data is available (e.g. after
 `cov-gen')")
 (make-variable-buffer-local 'cov--show-profile)
 
+;;------------------------------------------------------------------------------
 ;;;###autoload
 (cl-defun cov-show (&optional profile source)
   "Show PROFILE information in the current buffer.
@@ -342,6 +376,7 @@ SOURCE is a dotted pair (TOOL . FILE-NAME)."
      (when (y-or-n-p (format "%s.  Run `cov-gen' instead? " (cadr err)))
        (cov-gen)))))
 
+;;------------------------------------------------------------------------------
 (cl-defun cov--create-overlay (block denom)
   "Add a coverage overlay representing BLOCK to the current buffer.
 
@@ -378,6 +413,7 @@ file and is used to normalize (cov-block-count BLOCK)."
     (overlay-put o 'face face)
     (overlay-put o 'help-echo (number-to-string count))))
 
+;;------------------------------------------------------------------------------
 (cl-defun cov--overlays (&optional buffer)
   "Return all coverage overlays in the BUFFER.
 
@@ -391,6 +427,7 @@ If the BUFFER is nil, then the current buffer is used."
                           (overlay-get ov 'help-echo)))
    (lambda (a b) (< (car a) (car b)))))
 
+;;------------------------------------------------------------------------------
 ;;;###autoload
 (cl-defun cov-hide ()
   "Remove all coverage overlays from the current buffers."
@@ -398,6 +435,7 @@ If the BUFFER is nil, then the current buffer is used."
   (setq cov--show-profile nil)
   (remove-overlays nil nil 'cov t))
 
+;;------------------------------------------------------------------------------
 (cl-defun cov--tool-for-mode (mode)
   "Return coverage tool for given major MODE."
   (cl-loop for tool-id in cov-tools
@@ -406,6 +444,7 @@ If the BUFFER is nil, then the current buffer is used."
            return (or tool
                       (error "There are no coverage tool for mode %s" mode))))
 
+;;------------------------------------------------------------------------------
 ;;;###autoload
 (cl-defun cov-gen ()
   "Run compile command registered for the major mode of current
@@ -417,6 +456,7 @@ buffer."
       (error "Tool %s doesn't support `cov-gen'.  Generate the profile and set cov-source-for-file-func" (cov-tool-id tool)))
     (compile (funcall cmd (make-temp-file "cov")))))
 
+;;------------------------------------------------------------------------------
 (cl-defun cov--compilation-hook (buffer status)
   "Process results of the compilation buffer.
 
@@ -439,6 +479,7 @@ The buffer is processed only if the STATUS is 'finished\n'"
 
 (add-to-list 'compilation-finish-functions 'cov--compilation-hook)
 
+;;------------------------------------------------------------------------------
 (cl-defun cov--update-profile (source)
   "Update all buffers affected by a change to SOURCE.
 
@@ -458,6 +499,7 @@ This function is run by the compilation results parser."
                       (when cov--show-profile
                         (cov-show profile)))))))
 
+;;------------------------------------------------------------------------------
 (cl-defun cov--parse-profile (source)
   "Parse a coverage profile from SOURCE.
 
@@ -492,8 +534,8 @@ SOURCE is a dotted pair (TOOL . FILE-NAME).
      (signal 'cov--no-profile
              (list (format "Profile source %s doesn't exist" source))))))
 
+;;------------------------------------------------------------------------------
 ;; Tool: Go
-
 (cl-defun cov--parse-go-coverege (profile-fname)
   "Parse PROFILE-FNAME as Go coverage profile."
   ;; The format is line based.
@@ -537,6 +579,7 @@ SOURCE is a dotted pair (TOOL . FILE-NAME).
                   (when files
                     (concat (car (cov--go-list-root files)) "src/"))))))
 
+;;------------------------------------------------------------------------------
 (cl-defun cov--go-list-root (files)
   (apply 'process-lines
          (append '("go" "list" "-f" "{{.Root}}")
@@ -544,6 +587,7 @@ SOURCE is a dotted pair (TOOL . FILE-NAME).
 
 ;; Tool: lcov
 
+;;------------------------------------------------------------------------------
 (cl-defun cov--parse-lcov (profile-fname)
   "Parse PROFILE-FNAME as lcov profile."
   ;; The format is line based.
@@ -591,8 +635,10 @@ SOURCE is a dotted pair (TOOL . FILE-NAME).
                                      (list (match-string 1))))
       :parse-profile 'cov--parse-lcov))
 
+;;------------------------------------------------------------------------------
 ;; Tool: gcov
 
+;;------------------------------------------------------------------------------
 (cl-defun cov--gcov-source-for-file (fname)
   "Return gcov file name for file FNAME.
 
@@ -607,6 +653,7 @@ binary. Finally run gcov for all source files (or use `cov-gen').
     (when (file-exists-p profile-fname)
       (cons 'gcov profile-fname))))
 
+;;------------------------------------------------------------------------------
 (cl-defun cov--parse-gcov (profile-fname)
   "Parse PROFILE-FNAME as gcov profile."
   ;; The format is line based:
@@ -627,7 +674,6 @@ binary. Finally run gcov for all source files (or use `cov-gen').
          ((looking-at "\\s-*-:\\s-*0:Source:\\(.*\\)")
           (setq cur-file (match-string 1)))
          ((looking-at "\\s-*\\(\[0-9]+\\):\\s-*\\(\[0-9]+\\):")
-          (message "shit2")
           (cov-add-block-to-profile
            profile
            cur-file
@@ -644,6 +690,7 @@ binary. Finally run gcov for all source files (or use `cov-gen').
         (forward-line))
       profile)))
 
+;;------------------------------------------------------------------------------
 ;; Requires that *.gcda files are already in the same directory as the
 ;; source. To create them:
 ;;   - compile with -coverage flag
@@ -654,8 +701,10 @@ binary. Finally run gcov for all source files (or use `cov-gen').
       :id 'gcov
       :modes '(c-mode c++-mode)
       :compile-command (lambda (out-fname) "gcov *.gcda")
+;; Clang: "file: creating 'file'"
+;; Gcov:  "Creating 'file'"
       :parse-compilation-results (lambda ()
-                                   (cl-loop while (re-search-forward "^.*:creating '\\([^']+\\)'" nil t)
+                                   (cl-loop while (re-search-forward "^.*[Cc]reating '\\([^']+\\)'" nil t)
                                             collect (concat default-directory (match-string 1))))
       :parse-profile 'cov--parse-gcov
       :prefix (lambda (profile source)
